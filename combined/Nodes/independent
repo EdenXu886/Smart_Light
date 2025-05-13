@@ -1,10 +1,10 @@
 #include <Wire.h>
 #include "SparkFun_VEML6030_Ambient_Light_Sensor.h"
 
-// 实物接线所用的实际 GPIO
-#define LED_PIN 2       // D1 引脚实际为 GPIO2
-#define SDA 6           // A4 实际为 GPIO6
-#define SCL 7           // A5 实际为 GPIO7
+
+#define LED_PIN 2      
+#define SDA 6           
+#define SCL 7          
 
 #define GAIN 0.125
 #define INTEGRATION_TIME 100
@@ -55,9 +55,8 @@ void setup() {
   light.setGain(GAIN);
   light.setIntegTime(INTEGRATION_TIME);
 
-  ledcSetup(0, 5000, 8);           // PWM 通道0，5kHz，8位精度
-  ledcAttachPin(LED_PIN, 0);      // 绑定 GPIO2 到通道0
-}
+  ledcSetup(0, 5000, 8);          
+  ledcAttachPin(LED_PIN, 0);      
 
 void loop() {
   long lux_val = light.readLight();
