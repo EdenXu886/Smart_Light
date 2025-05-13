@@ -1,9 +1,10 @@
 #include <Wire.h>
 #include "SparkFun_VEML6030_Ambient_Light_Sensor.h"
 
-#define LED_PIN 15
-#define SDA 21
-#define SCL 22
+// 实物接线所用的实际 GPIO
+#define LED_PIN 2       // D1 引脚实际为 GPIO2
+#define SDA 6           // A4 实际为 GPIO6
+#define SCL 7           // A5 实际为 GPIO7
 
 #define GAIN 0.125
 #define INTEGRATION_TIME 100
@@ -11,10 +12,7 @@
 #define MAX_LUX 1500.0
 #define GAMMA_VAL 2.2
 
-#define AL_ADDR 0x10  // VEML6030 I2C address
-
-SparkFun_Ambient_Light light(AL_ADDR);
-
+SparkFun_Ambient_Light light;
 long last_lux_val = -1;
 
 bool lux_above_threshold(long lux_val) {
@@ -23,10 +21,7 @@ bool lux_above_threshold(long lux_val) {
 
 uint8_t cal_brightness(long lux_val) {
   lux_val = constrain(lux_val, 0L, (long)MAX_LUX);
-
-  if (lux_above_threshold(lux_val)) {
-    lux_val = last_lux_val;
-  }
+  if (lux_above_threshold(lux_val)) lux_val = last_lux_val;
 
   const long BOOST_LUX = 100;
   if (lux_val <= BOOST_LUX) {
@@ -36,10 +31,8 @@ uint8_t cal_brightness(long lux_val) {
 
   float norm = float(lux_val - BOOST_LUX) / float(MAX_LUX - BOOST_LUX);
   norm = constrain(norm, 0.0, 1.0);
-
   float log_val = log10(norm * 9.0 + 1.0);
   float gamma_corrected = pow(log_val, 1.0 / GAMMA_VAL);
-
   int pwm = int(constrain(gamma_corrected * 255.0 + 0.5, 0, 255));
   uint8_t pwm_inverted = 255 - pwm;
 
@@ -49,10 +42,11 @@ uint8_t cal_brightness(long lux_val) {
 
 void setup() {
   Serial.begin(115200);
-
   Wire.begin(SDA, SCL);
+
   if (light.begin()) {
     Serial.println("LDR connected successfully");
+    light.setI2CAddress(0x10);  // 可选：手动设置地址
   } else {
     Serial.println("Could not communicate with the sensor!");
     return;
@@ -61,8 +55,8 @@ void setup() {
   light.setGain(GAIN);
   light.setIntegTime(INTEGRATION_TIME);
 
-  ledcSetup(0, 5000, 8);
-  ledcAttachPin(LED_PIN, 0);
+  ledcSetup(0, 5000, 8);           // PWM 通道0，5kHz，8位精度
+  ledcAttachPin(LED_PIN, 0);      // 绑定 GPIO2 到通道0
 }
 
 void loop() {
