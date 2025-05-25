@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Streetlight Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background: #f7f8fa;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+        .header-title {
+            font-size: 2.2em;
+            font-weight: 600;
+            color: #222b45;
+        }
+        .header-sub {
+            color: #7b8190;
+            font-size: 1.1em;
+        }
+        .node-select {
+            font-size: 1.1em;
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: 1px solid #e0e3ea;
+            background: #fff;
+            color: #222b45;
+            margin-left: 24px;
+        }
+        .cards {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 36px;
+            flex-wrap: wrap;
+        }
+        .card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px #0001;
+            padding: 32px 36px;
+            min-width: 200px;
+            flex: 1;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .card-label {
+            color: #7b8190;
+            font-size: 1.05em;
+            margin-bottom: 10px;
+        }
+        .card-value {
+            font-size: 2.3em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .state-off { color: #b0b7c3; }
+        .state-dim { color: #ffb300; }
+        .state-bright { color: #1976d2; }
+        .state-emergency { color: #e53935; }
+        .emergency-badge {
+            display: inline-block;
+            background: #ffeaea;
+            color: #e53935;
+            border-radius: 8px;
+            padding: 4px 16px;
+            font-weight: 600;
+            margin-top: 8px;
+            font-size: 1em;
+        }
+        .tabs {
+            display: flex;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            font-size: 1.1em;
+            color: #7b8190;
+            padding: 10px 28px;
+            border-radius: 12px 12px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s, color 0.2s;
+        }
+        .tab-btn.active {
+            background: #fff;
+            color: #1976d2;
+            box-shadow: 0 2px 8px #0001;
+        }
+        .tab-content {
+            background: #fff;
+            border-radius: 0 0 18px 18px;
+            box-shadow: 0 2px 8px #0001;
+            padding: 32px;
+            min-height: 320px;
+        }
+        .section-title {
+            font-size: 1.3em;
+            color: #222b45;
+            margin: 32px 0 18px 0;
+            font-weight: 600;
+        }
+        .device-info {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px #0001;
+            padding: 24px 32px;
+            margin-bottom: 32px;
+            color: #495057;
+            font-size: 1.05em;
+        }
+        .future-features {
+            background: #f3f6fa;
+            border-radius: 14px;
+            padding: 24px 32px;
+            color: #7b8190;
+            font-size: 1.05em;
+        }
+        @media (max-width: 900px) {
+            .cards { flex-direction: column; }
+            .container { padding: 0 2vw; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <div class="header-title">Smart Streetlight Dashboard</div>
+            <div class="header-sub">Minimal, professional, and extensible real-time monitoring</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <div id="last_update" class="header-sub">Last update: -</div>
+            <select id="node_select" class="node-select"></select>
+        </div>
+    </div>
+    <!-- Live Status Cards -->
+    <div class="cards">
+        <div class="card">
+            <div class="card-label">Light State</div>
+            <div class="card-value" id="light_state">-</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Ambient Lux</div>
+            <div class="card-value" id="lux_value">-</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Today's Motion Count</div>
+            <div class="card-value" id="motion_count_today">-</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Emergency</div>
+            <div class="card-value" id="emergency_mode">-</div>
+            <div class="emergency-badge" id="emergency_badge" style="display:none;">EMERGENCY</div>
+            <div id="emergency_stats" style="margin-top:12px;text-align:left;font-size:1em;"></div>
+        </div>
+    </div>
+    <!-- Multi-Chart Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('light')">Light</button>
+        <button class="tab-btn" onclick="showTab('motion')">Motion</button>
+        <button class="tab-btn" onclick="showTab('peak')">Peak</button>
+    </div>
+    <div class="tab-content" id="tab-light">
+        <canvas id="lightChart" height="80"></canvas>
+    </div>
+    <div class="tab-content" id="tab-motion" style="display:none;">
+        <canvas id="motionChart" height="80"></canvas>
+    </div>
+    <div class="tab-content" id="tab-peak" style="display:none;">
+        <canvas id="peakChart" height="80"></canvas>
+    </div>
+    <!-- Statistical Analysis Section -->
+    <div class="section-title">Statistical Analysis</div>
+    <div class="cards" style="margin-bottom:0;">
+        <div class="card">
+            <div class="card-label">Peak Activity (3h window)</div>
+            <div class="card-value" id="peak_window">-</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Avg Lux (Today)</div>
+            <div class="card-value" id="avg_lux">-</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Energy (Today, Wh)</div>
+            <div class="card-value" id="total_energy">-</div>
+        </div>
+    </div>
+    <!-- Device Info Section -->
+    <div class="section-title">Device Info</div>
+    <div class="device-info" id="device_info">Loading...</div>
+    <!-- Future Features Section -->
+    <div class="section-title">Future Features</div>
+    <div class="future-features">
+        Remote control, multi-device management, advanced analytics, alert notifications, and more coming soon.
+    </div>
+</div>
+<script>
+let nodeList = [];
+let currentNode = 'all';
+
+async function updateNodeList() {
+    const res = await fetch('/nodes');
+    const nodes = await res.json();
+    const select = document.getElementById('node_select');
+    // 只有节点列表变化时才更新
+    if (JSON.stringify(nodes) !== JSON.stringify(nodeList)) {
+        nodeList = nodes;
+        select.innerHTML = '';
+        // 先加"All Nodes"选项
+        const allOpt = document.createElement('option');
+        allOpt.value = 'all';
+        allOpt.text = 'All Nodes';
+        select.appendChild(allOpt);
+        // 再加真实节点
+        nodeList.forEach(mac => {
+            const opt = document.createElement('option');
+            opt.value = mac;
+            opt.text = mac;
+            select.appendChild(opt);
+        });
+        // 默认选中第一个真实节点（如果有），否则 all
+        if (nodeList.length > 0) {
+            currentNode = nodeList[0];
+        } else {
+            currentNode = 'all';
+        }
+        select.value = currentNode;
+    }
+}
+
+document.getElementById('node_select').addEventListener('change', function() {
+    currentNode = this.value;
+    fetchLatest();
+    fetchCharts();
+});
+
+// 页面加载时初始化节点列表
+updateNodeList().then(() => { fetchLatest(); fetchCharts(); });
+// 只定时刷新数据，不再每秒刷新节点列表
+setInterval(() => { fetchLatest(); fetchCharts(); }, 1000);
+
+// Tab logic
+function showTab(tab) {
+    ['light','motion','peak'].forEach(t => {
+        document.getElementById('tab-' + t).style.display = (t === tab) ? '' : 'none';
+        document.querySelector('.tab-btn.active').classList.remove('active');
+        document.querySelectorAll('.tab-btn')[['light','motion','peak'].indexOf(tab)].classList.add('active');
+    });
+}
+// Utility: Format light state
+function lightStateText(val) {
+    if (val === 0) return '<span class="state-off">Off</span>';
+    if (val === 1) return '<span class="state-dim">Dim</span>';
+    if (val === 2) return '<span class="state-bright">Bright</span>';
+    return '-';
+}
+function formatPowerUsage(val) {
+    if (typeof val !== 'number') return '-';
+    if (val < 1 && val > 0) return (val * 1000).toFixed(1) + ' mWh';
+    return val.toFixed(2) + ' Wh';
+}
+// Fetch and update live status
+async function fetchLatest() {
+    if (!currentNode) return;
+    if (currentNode === 'all') {
+        // All Nodes: 置空主卡片内容
+        document.getElementById('light_state').innerHTML = '-';
+        document.getElementById('lux_value').innerText = '-';
+        document.getElementById('motion_count_today').innerText = '-';
+        document.getElementById('emergency_mode').innerText = '-';
+        document.getElementById('emergency_badge').style.display = 'none';
+        document.getElementById('last_update').innerText = 'Last update: -';
+        document.getElementById('device_info').innerHTML = '<b>All Nodes selected.</b>';
+        return;
+    }
+    const res = await fetch(`/latest/${currentNode}`);
+    const node = await res.json();
+    if (!node || !node.mac) return;
+    document.getElementById('light_state').innerHTML = lightStateText(node.light_state);
+    document.getElementById('lux_value').innerText = (typeof node.lux_value === 'number') ? node.lux_value.toFixed(2) : '-';
+    document.getElementById('motion_count_today').innerText = node.motion_count_today ?? '-';
+    document.getElementById('emergency_mode').innerText = node.emergency_mode ? 'ON' : 'OFF';
+    document.getElementById('emergency_badge').style.display = node.emergency_mode ? '' : 'none';
+                                                                               document.getElementById('last_update').innerText = 'Last update: ' + toBeijingTime(node.timestamp);
+    document.getElementById('device_info').innerHTML =
+        `<b>MAC:</b> ${node.mac || '-'}<br>
+         <b>Current Light State:</b> ${lightStateText(node.light_state)}<br>
+         <b>Motion Count (Total):</b> ${node.motion_count_total ?? '-'}<br>
+         <b>Lux:</b> ${(typeof node.lux_value === 'number') ? node.lux_value.toFixed(2) : '-'}<br>
+         <b>Emergency Mode:</b> ${node.emergency_mode ? 'ON' : 'OFF'}<br>
+         <b>Last Update:</b> ${toBeijingTime(node.timestamp) || '-'}<br>`;
+}
+// Chart.js setup
+let lightChart = new Chart(document.getElementById('lightChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: [], datasets: [
+        { label: 'Light State', data: [], borderColor: '#1976d2', backgroundColor: 'rgba(25,118,210,0.08)', yAxisID: 'y' }
+    ] },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: true } },
+        scales: {
+            y: { type: 'linear', position: 'left', title: { display: true, text: 'Light State' }, min: 0, max: 2, ticks: { callback: function(value) { if (value === 0) return 'OFF'; if (value === 1) return 'DIM'; if (value === 2) return 'BRIGHT'; return value; } } }
+        }
+    }
+});
+let motionChart = new Chart(document.getElementById('motionChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: [], datasets: [
+        { label: 'Motion Count', data: [], borderColor: '#ffb300', backgroundColor: 'rgba(255,179,0,0.08)' }
+    ] },
+    options: { responsive: true, plugins: { legend: { display: true } } }
+});
+let peakChart = new Chart(document.getElementById('peakChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: [], datasets: [
+        { label: 'Hourly Motion', data: [], backgroundColor: '#1976d2' }
+    ] },
+    options: { responsive: true, plugins: { legend: { display: true } } }
+});
+// Fetch and update charts and stats
+async function fetchCharts() {
+    if (!currentNode || currentNode === 'all') {
+        // 清空所有图表
+        lightChart.data.labels = [];
+        lightChart.data.datasets[0].data = [];
+        lightChart.update();
+        motionChart.data.labels = [];
+        motionChart.data.datasets[0].data = [];
+        motionChart.update();
+        peakChart.data.labels = [];
+        peakChart.data.datasets[0].data = [];
+        peakChart.update();
+        document.getElementById('peak_window').innerText = '-';
+        document.getElementById('avg_lux').innerText = '-';
+        document.getElementById('total_energy').innerText = '-';
+        return;
+    }
+    // Light state history
+    let res = await fetch('/history/daily');
+    let data = await res.json();
+    if (data[currentNode]) {
+        lightChart.data.labels = (data[currentNode].timestamps || []).map(toBeijingTime);
+        lightChart.data.datasets[0].data = data[currentNode].light_state || [];
+        lightChart.update();
+        motionChart.data.labels = (data[currentNode].timestamps || []).map(toBeijingTime);
+        motionChart.data.datasets[0].data = data[currentNode].motion_count_today || [];
+        motionChart.update();
+    } else {
+        // 没有数据时清空
+        lightChart.data.labels = [];
+        lightChart.data.datasets[0].data = [];
+        lightChart.update();
+        motionChart.data.labels = [];
+        motionChart.data.datasets[0].data = [];
+        motionChart.update();
+    }
+    // Peak analysis
+    res = await fetch('/stats/peak');
+    data = await res.json();
+    if (data[currentNode]) {
+        peakChart.data.labels = Array.from({length:24},(_,i)=>(i+8)%24 + ':00');
+        peakChart.data.datasets[0].data = data[currentNode].hourly || [];
+        peakChart.update();
+        document.getElementById('peak_window').innerText = data[currentNode].peak_start + ':00 - ' + data[currentNode].peak_end + ':59';
+    } else {
+        peakChart.data.labels = [];
+        peakChart.data.datasets[0].data = [];
+        peakChart.update();
+        document.getElementById('peak_window').innerText = '-';
+    }
+    // Statistical analysis
+    res = await fetch('/stats/daily');
+    data = await res.json();
+    if (data[currentNode]) {
+        let todayIdx = data[currentNode].days.length-1;
+        document.getElementById('avg_lux').innerText = (data[currentNode].lux && data[currentNode].lux[todayIdx]) ? data[currentNode].lux[todayIdx].toFixed(2) : '-';
+        document.getElementById('total_energy').innerText = formatPowerUsage(data[currentNode].energy && data[currentNode].energy[todayIdx] ? data[currentNode].energy[todayIdx] : 0);
+    } else {
+        document.getElementById('avg_lux').innerText = '-';
+        document.getElementById('total_energy').innerText = '-';
+    }
+}
+async function updateEmergencyStatsMinimal() {
+    try {
+        const res = await fetch('/emergency/today');
+        const data = await res.json();
+        let html = '';
+        if (!currentNode || currentNode === 'all') {
+            html = '<span style="color:#888;">Select a node to view emergency events.</span>';
+        } else {
+            // 只显示当前节点的总数
+            const count = data.by_node[currentNode] ?? 0;
+            html = `<b>Today:</b> ${count}`;
+            if (count > 0) {
+                html += '<br><span style="color:#888;"></span>';
+            } else {
+                html += '<br><span style="color:#888;">No emergency events today.</span>';
+            }
+        }
+        document.getElementById('emergency_stats').innerHTML = html;
+    } catch (e) {
+        document.getElementById('emergency_stats').innerHTML = '<span style="color:#888;">(Failed to load emergency stats)</span>';
+    }
+}
+setInterval(updateEmergencyStatsMinimal, 1000);
+updateEmergencyStatsMinimal();
+
+// 在<script>标签内添加toBeijingTime函数
+function toBeijingTime(utcString) {
+    if (!utcString) return '-';
+    if (!utcString.includes('T')) {
+        utcString = utcString.replace(' ', 'T');
+    }
+    if (!utcString.endsWith('Z')) {
+        utcString += 'Z';
+    }
+    let date = new Date(utcString);
+    if (isNaN(date)) return utcString;
+    // 返回东八区时间字符串
+    return date.getFullYear() + '-' +
+        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getDate()).padStart(2, '0') + ' ' +
+        String(date.getHours()).padStart(2, '0') + ':' +
+        String(date.getMinutes()).padStart(2, '0') + ':' +
+        String(date.getSeconds()).padStart(2, '0');
+}
+</script>
+</body>
+</html>
